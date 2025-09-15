@@ -40,7 +40,7 @@
         }
         .sort-options button {
             background-color: #e9ecef; border: 1px solid #ced4da; color: #495057;
-            padding: 10px; cursor: pointer;
+            padding: 10px; cursor: pointer; font-size: 0.9em;
         }
         .sort-options button.active {
             background-color: #005a9c; color: white; border-color: #005a9c;
@@ -53,11 +53,13 @@
             border-radius: 8px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         .route-summary {
-            display: flex; justify-content: space-between; align-items: center;
-            font-weight: bold; font-size: 1.1em; margin-bottom: 15px; flex-wrap: wrap;
+            display: grid; grid-template-columns: 1fr auto;
+            align-items: center;
+            font-weight: bold; font-size: 1.1em; margin-bottom: 15px;
         }
-        .route-summary .time { color: #d9534f; }
-        .route-summary .transfers { color: #f0ad4e; }
+        .route-summary .title { grid-column: 1 / -1; margin-bottom: 8px; }
+        .route-summary .time { color: #d9534f; font-size: 0.9em; text-align: right;}
+        .route-summary .transfers { color: #f0ad4e; font-size: 0.9em;}
         .best-badge {
             background-color: #d9534f; color: white; font-size: 0.8em;
             padding: 3px 8px; border-radius: 10px; margin-left: 10px;
@@ -138,7 +140,6 @@
             for (let i = 0; i < r.length - 1; i++) if (r[i].vessel !== r[i + 1].vessel) c++;
             return c;
         };
-        // ▼▼▼▼▼【新機能】実移動時間を計算する関数▼▼▼▼▼
         const getActualTravelTime = r => r.reduce((total, leg) => total + (timeToMinutes(leg.arr) - timeToMinutes(leg.dep)), 0);
 
         function findRoutes(start, end, cTime = 0, cPath = [], visited = new Set()) {
@@ -176,13 +177,26 @@
             const modeIcons = { Flight: '✈️', Bus: '🚌', Ferry: '🚢', FastFerry: '🚤' };
             routes.forEach(route => {
                 const card = document.createElement('div'); card.className = 'route-card';
-                const transfers = getTransfers(route); const duration = getDuration(route);
+                const transfers = getTransfers(route); 
+                const duration = getDuration(route);
+                const travelTime = getActualTravelTime(route);
+
                 let badge = (route === bestDurationRoute) ? '<span class="best-badge">最速</span>' : '';
-                let cardHTML = `<div class="route-summary"><div>${portNames[route[0].from]} → ${portNames[route[route.length-1].to]} ${badge}</div><div class="transfers">乗り換え: ${transfers}回</div><div class="time">所要時間: ${Math.floor(duration/60)}時間 ${duration%60}分</div></div>`;
+                
+                // ▼▼▼▼▼【修正点】表示形式を変更▼▼▼▼▼
+                const durationH = Math.floor(duration / 60), durationM = duration % 60;
+                const travelH = Math.floor(travelTime / 60), travelM = travelTime % 60;
+                const timeDisplay = `所要時間: ${durationH}時間 ${durationM}分 (実移動: ${travelH}時間 ${travelM}分)`;
+
+                let cardHTML = `<div class="route-summary">
+                    <div class="title">${portNames[route[0].from]} → ${portNames[route[route.length-1].to]} ${badge}</div>
+                    <div class="transfers">乗り換え: ${transfers}回</div>
+                    <div class="time">${timeDisplay}</div>
+                </div>`;
                 route.forEach((leg, index) => {
                     if (index > 0) {
                         const prevLeg = route[index - 1], waitTime = timeToMinutes(leg.dep) - timeToMinutes(prevLeg.arr);
-                        const type = (prevLeg.vessel !== prevLeg.vessel) ? "乗り換え" : "寄港";
+                        const type = (prevLeg.vessel !== leg.vessel) ? "乗り換え" : "寄港";
                         cardHTML += `<div class="transfer-info">▼ ${portNames[leg.from]}で**${type}** (待ち時間: ${waitTime}分)</div>`;
                     }
                     cardHTML += `<div class="leg"><div class="leg-mode">${modeIcons[leg.mode]||'➡️'}</div><div class="leg-time">${leg.dep} → ${leg.arr}</div><div class="leg-details"><span class="leg-path">${portNames[leg.from]} → ${portNames[leg.to]}</span><span class="leg-vessel">${leg.vessel}</span></div></div>`;
@@ -193,7 +207,6 @@
         
         function sortAndDisplay() {
             let sortedResults = [...currentResults];
-            // ▼▼▼▼▼【修正点】並び替えロジックに「実移動時間」を追加▼▼▼▼▼
             if (currentSort === 'default') {
                 sortedResults.sort((a, b) => getTransfers(a) - getTransfers(b) || getDuration(a) - getDuration(b) || timeToMinutes(a[0].dep) - timeToMinutes(b[0].dep));
             } else if (currentSort === 'departure') {
