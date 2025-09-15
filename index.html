@@ -35,11 +35,12 @@
         }
         button#search-btn:hover { background-color: #0056b3; }
         .sort-options {
-            display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; 
+            margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;
         }
         .sort-options button {
             background-color: #e9ecef; border: 1px solid #ced4da; color: #495057;
-            flex-grow: 1; cursor: pointer;
+            padding: 10px; cursor: pointer;
         }
         .sort-options button.active {
             background-color: #005a9c; color: white; border-color: #005a9c;
@@ -98,6 +99,7 @@
             <button id="sort-default" data-sort="default">おすすめ順</button>
             <button id="sort-departure" data-sort="departure">出発時刻順</button>
             <button id="sort-duration" data-sort="duration">所要時間順</button>
+            <button id="sort-travel-time" data-sort="travel-time">実移動時間順</button>
         </div>
         <h2 id="results-title" style="display:none;">検索結果</h2>
         <div id="results">
@@ -136,6 +138,8 @@
             for (let i = 0; i < r.length - 1; i++) if (r[i].vessel !== r[i + 1].vessel) c++;
             return c;
         };
+        // ▼▼▼▼▼【新機能】実移動時間を計算する関数▼▼▼▼▼
+        const getActualTravelTime = r => r.reduce((total, leg) => total + (timeToMinutes(leg.arr) - timeToMinutes(leg.dep)), 0);
 
         function findRoutes(start, end, cTime = 0, cPath = [], visited = new Set()) {
             visited.add(start); let routes = [];
@@ -189,12 +193,15 @@
         
         function sortAndDisplay() {
             let sortedResults = [...currentResults];
+            // ▼▼▼▼▼【修正点】並び替えロジックに「実移動時間」を追加▼▼▼▼▼
             if (currentSort === 'default') {
                 sortedResults.sort((a, b) => getTransfers(a) - getTransfers(b) || getDuration(a) - getDuration(b) || timeToMinutes(a[0].dep) - timeToMinutes(b[0].dep));
             } else if (currentSort === 'departure') {
                 sortedResults.sort((a, b) => timeToMinutes(a[0].dep) - timeToMinutes(b[0].dep));
             } else if (currentSort === 'duration') {
                 sortedResults.sort((a, b) => getDuration(a) - getDuration(b));
+            } else if (currentSort === 'travel-time') {
+                sortedResults.sort((a, b) => getActualTravelTime(a) - getActualTravelTime(b));
             }
             document.querySelectorAll('.sort-options button').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`sort-${currentSort}`).classList.add('active');
@@ -210,19 +217,14 @@
             startPorts.forEach(start => { endPorts.forEach(end => { if (start !== end) allRoutes.push(...findRoutes(start, end)); }); });
             
             const uniqueRoutes = Array.from(new Map(allRoutes.map(r => [JSON.stringify(r), r])).values());
-            
-            // ▼▼▼▼▼【修正点】不要な周回ルートをフィルタリング▼▼▼▼▼
             const finalDestination = endPorts[0];
             currentResults = uniqueRoutes.filter(route => {
-                for (let i = 0; i < route.length - 1; i++) {
-                    if (route[i].to === finalDestination) return false;
-                }
+                for (let i = 0; i < route.length - 1; i++) if (route[i].to === finalDestination) return false;
                 return true;
             });
-            // ▲▲▲▲▲ここまで▲▲▲▲▲
 
             if(noResultsP) noResultsP.style.display = 'none';
-            currentSort = 'default'; // 検索時は必ずおすすめ順にリセット
+            currentSort = 'default';
             sortAndDisplay();
         });
 
@@ -245,4 +247,3 @@
 
 </body>
 </html>
-
