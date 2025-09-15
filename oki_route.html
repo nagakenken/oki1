@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隠岐諸島 航路検索Webアプリ (2025.09版)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f4f8; color: #333; margin: 0; padding: 20px;
+        }
+        .container {
+            max-width: 800px; margin: 0 auto; background-color: #fff; padding: 25px;
+            border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 { text-align: center; color: #005a9c; margin-bottom: 20px; }
+        .search-form {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 15px;
+            align-items: end; margin-bottom: 30px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 8px; color: #555; }
+        select, button {
+            padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px;
+        }
+        #swap-btn {
+            padding: 8px 12px;
+            line-height: 1;
+            height: 44px;
+            font-size: 20px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+        button#search-btn {
+            background-color: #007bff; color: white; border: none; cursor: pointer;
+            transition: background-color 0.3s ease; grid-column: 1 / -1;
+        }
+        button#search-btn:hover { background-color: #0056b3; }
+        .results-container h2 {
+            color: #005a9c; border-bottom: 2px solid #005a9c; padding-bottom: 10px; margin-top: 0;
+        }
+        .route-card {
+            background-color: #f9f9f9; border: 1px solid #e0e0e0; border-left: 5px solid #007bff;
+            border-radius: 8px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .route-summary {
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: bold; font-size: 1.1em; margin-bottom: 15px; flex-wrap: wrap;
+        }
+        .route-summary .time { color: #d9534f; }
+        .route-summary .transfers { color: #f0ad4e; }
+        .best-badge {
+            background-color: #d9534f; color: white; font-size: 0.8em;
+            padding: 3px 8px; border-radius: 10px; margin-left: 10px;
+        }
+        .leg {
+            display: grid; grid-template-columns: 30px 80px auto; align-items: center;
+            gap: 10px; padding: 10px 0; border-top: 1px dashed #ccc;
+        }
+        .leg:first-child { border-top: none; }
+        .leg-mode { font-size: 1.5em; }
+        .leg-time { font-weight: bold; }
+        .leg-details { display: flex; flex-direction: column; }
+        .leg-path { font-weight: bold; }
+        .leg-vessel { font-size: 0.9em; color: #777; }
+        .transfer-info {
+            text-align: center; padding: 10px; color: #555;
+            font-style: italic; font-size: 0.9em;
+        }
+        #no-results { text-align: center; padding: 40px; color: #777; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>隠岐諸島 航路検索アプリ (修正最終版)</h1>
+    <div class="search-form">
+        <div class="form-group">
+            <label for="departure">出発地</label>
+            <select id="departure"></select>
+        </div>
+        <button id="swap-btn" title="出発地と到着地を入れ替え">⇄</button>
+        <div class="form-group">
+            <label for="arrival">到着地</label>
+            <select id="arrival"></select>
+        </div>
+        <button id="search-btn">ルートを検索</button>
+    </div>
+    <div class="results-container">
+        <h2 id="results-title" style="display:none;">検索結果</h2>
+        <div id="results">
+            <p id="no-results">出発地と到着地を選択して検索してください。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const locations = {
+        'TOKYO': '東京 (羽田空港)', 'HONDO': '本土 (境港/七類港)', 'SAIGO': '西郷港 (島後)',
+        'OKI_AIRPORT': '隠岐ジオパーク空港', 'BEPPU': '別府港 (西ノ島)',
+        'HISHIURA': '菱浦港 (中ノ島)', 'KURII': '来居港 (知夫里島)'
+    };
+    const portNames = {
+        'TOKYO_HND': '羽田空港', 'YGJ_AIRPORT': '米子鬼太郎空港', 'IZO_AIRPORT': '出雲縁結び空港', 
+        'SAKAI': '境港 (本土)', 'SHICHI': '七類港 (本土)', 'OKI_AIRPORT': '隠岐ジオパーク空港', 
+        'SAIGO': '西郷港 (島後)', 'BEPPU': '別府港 (西ノ島)', 'HISHIURA': '菱浦港 (中ノ島)', 
+        'KURII': '来居港 (知夫里島)'
+    };
+
+    const schedule = [
+        // --- 飛行機・連絡バス（往路・復路） ---
+        { from: 'TOKYO_HND', to: 'OKI_AIRPORT', dep: '10:15', arr: '11:50', mode: 'Flight', vessel: 'JAL(J-AIR) 3431便' }, { from: 'TOKYO_HND', to: 'YGJ_AIRPORT', dep: '10:45', arr: '12:05', mode: 'Flight', vessel: 'ANA385便' }, { from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '11:35', arr: '13:00', mode: 'Flight', vessel: 'JAL281便' }, { from: 'OKI_AIRPORT', to: 'SAIGO', dep: '12:00', arr: '12:15', mode: 'Bus', vessel: '隠岐一畑バス 空港線' }, { from: 'YGJ_AIRPORT', to: 'SHICHI', dep: '13:00', arr: '13:45', mode: 'Bus', vessel: '隠岐汽船接続バス' }, { from: 'IZO_AIRPORT', to: 'SHICHI', dep: '13:20', arr: '14:30', mode: 'Bus', vessel: '隠岐汽船接続バス' }, { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '11:30', arr: '11:45', mode: 'Bus', vessel: '隠岐一畑バス 空港線' }, { from: 'SHICHI', to: 'IZO_AIRPORT', dep: '11:40', arr: '12:50', mode: 'Bus', vessel: '隠岐汽船接続バス' }, { from: 'OKI_AIRPORT', to: 'TOKYO_HND', dep: '12:20', arr: '13:45', mode: 'Flight', vessel: 'JAL(J-AIR) 3432便' }, { from: 'YGJ_AIRPORT', to: 'TOKYO_HND', dep: '16:40', arr: '18:00', mode: 'Flight', vessel: 'ANA388便' }, { from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '13:35', arr: '14:55', mode: 'Flight', vessel: 'JAL282便' },
+        
+        // --- フェリー・高速船 ---
+        { from: 'SHICHI', to: 'SAIGO', dep: '09:00', arr: '11:25', mode: 'Ferry', vessel: 'フェリーおき' },
+        { from: 'SAIGO', to: 'HISHIURA', dep: '12:00', arr: '13:10', mode: 'Ferry', vessel: 'フェリーおき' },
+        { from: 'HISHIURA', to: 'BEPPU', dep: '13:20', arr: '13:35', mode: 'Ferry', vessel: 'フェリーおき' },
+        // ▼▼▼▼▼【修正点】欠落していた「フェリーしらしま」の8:30発の便を復元▼▼▼▼▼
+        { from: 'SAIGO', to: 'HISHIURA', dep: '08:30', arr: '09:40', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'HISHIURA', to: 'BEPPU', dep: '09:50', arr: '10:05', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'BEPPU', to: 'KURII', dep: '10:20', arr: '10:50', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'KURII', to: 'SAKAI', dep: '10:55', arr: '13:20', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        // ▲▲▲▲▲ここまで▲▲▲▲▲
+        { from: 'SAKAI', to: 'KURII', dep: '14:10', arr: '16:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'KURII', to: 'BEPPU', dep: '16:40', arr: '17:10', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'BEPPU', to: 'HISHIURA', dep: '17:20', arr: '17:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'SHICHI', to: 'SAIGO', dep: '15:45', arr: '16:54', mode: 'FastFerry', vessel: 'レインボージェット' },
+        { from: 'SAIGO', to: 'HISHIURA', dep: '17:00', arr: '17:31', mode: 'FastFerry', vessel: 'レインボージェット' },
+        { from: 'BEPPU', to: 'SAIGO', dep: '09:00', arr: '10:00', mode: 'FastFerry', vessel: 'レインボージェット（復路）' },
+        { from: 'SAIGO', to: 'SHICHI', dep: '10:15', arr: '11:20', mode: 'FastFerry', vessel: 'レインボージェット（復路）' },
+        
+        // --- 内航船 ---
+        { from: 'HISHIURA', to: 'BEPPU', dep: '07:45', arr: '08:00', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'BEPPU', to: 'HISHIURA', dep: '08:15', arr: '08:30', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'KURII', dep: '08:35', arr: '08:55', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'KURII', to: 'HISHIURA', dep: '09:05', arr: '09:25', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'BEPPU', dep: '15:20', arr: '15:35', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'BEPPU', to: 'HISHIURA', dep: '15:50', arr: '16:05', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'KURII', dep: '16:10', arr: '16:30', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'KURII', to: 'HISHIURA', dep: '16:40', arr: '17:00', mode: 'Ferry', vessel: 'フェリーどうぜん' },
+        { from: 'BEPPU', to: 'HISHIURA', dep: '07:20', arr: '07:35', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '07:40', arr: '08:00', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '08:10', arr: '08:30', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '08:35', arr: '08:50', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'BEPPU', to: 'HISHIURA', dep: '10:00', arr: '10:15', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '10:20', arr: '10:40', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '10:50', arr: '11:10', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '11:15', arr: '11:30', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'BEPPU', to: 'HISHIURA', dep: '13:00', arr: '13:15', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '13:20', arr: '13:40', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '13:50', arr: '14:10', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '14:15', arr: '14:30', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'BEPPU', to: 'HISHIURA', dep: '17:00', arr: '17:15', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '17:20', arr: '17:40', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '17:50', arr: '18:10', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '18:15', arr: '18:30', mode: 'Ferry', vessel: 'いそかぜ' }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const departureSelect = document.getElementById('departure');
+        const arrivalSelect = document.getElementById('arrival');
+        const searchBtn = document.getElementById('search-btn');
+        const swapBtn = document.getElementById('swap-btn');
+        const resultsDiv = document.getElementById('results');
+        const resultsTitle = document.getElementById('results-title');
+        const noResultsP = document.getElementById('no-results');
+
+        const timeToMinutes = t => (t.split(':').map(Number)[0] * 60) + t.split(':').map(Number)[1];
+        const getDuration = r => timeToMinutes(r[r.length - 1].arr) - timeToMinutes(r[0].dep);
+        const getTransfers = r => {
+            let c = 0;
+            for (let i = 0; i < r.length - 1; i++) if (r[i].vessel !== r[i + 1].vessel) c++;
+            return c;
+        };
+
+        function findRoutes(start, end, cTime = 0, cPath = [], visited = new Set()) {
+            visited.add(start); let routes = [];
+            for (const leg of schedule) if (leg.from === start && leg.to === end && timeToMinutes(leg.dep) >= cTime) routes.push([...cPath, leg]);
+            if (cPath.length < 5) {
+                for (const leg of schedule) {
+                    if (leg.from === start && !visited.has(leg.to) && timeToMinutes(leg.dep) >= cTime) {
+                        const arrTime = timeToMinutes(leg.arr); let transferTime = 5;
+                        if (leg.mode === 'Bus' && cPath.some(p => p.mode === 'Flight')) transferTime = 30;
+                        routes.push(...findRoutes(leg.to, end, arrTime + transferTime, [...cPath, leg], new Set(visited)));
+                    }
+                }
+            } return routes;
+        }
+
+        function populateSelectors() {
+            Object.keys(locations).forEach(code => {
+                departureSelect.add(new Option(locations[code], code));
+                arrivalSelect.add(new Option(locations[code], code));
+            });
+            departureSelect.value = 'SAIGO'; arrivalSelect.value = 'HISHIURA';
+        }
+
+        function displayResults(routes) {
+            resultsDiv.innerHTML = '';
+            if (routes.length === 0) {
+                resultsDiv.innerHTML = '<p id="no-results">条件に合うルートが見つかりませんでした。</p>';
+                resultsTitle.style.display = 'none'; return;
+            }
+            resultsTitle.style.display = 'block';
+
+            routes.sort((a, b) => getTransfers(a) - getTransfers(b) || getDuration(a) - getDuration(b) || timeToMinutes(a[0].dep) - timeToMinutes(b[0].dep));
+            
+            const minDuration = Math.min(...routes.map(getDuration));
+            const bestDurationRoute = routes.find(r => getDuration(r) === minDuration);
+            const modeIcons = { Flight: '✈️', Bus: '🚌', Ferry: '🚢', FastFerry: '🚤' };
+
+            routes.forEach(route => {
+                const card = document.createElement('div'); card.className = 'route-card';
+                const transfers = getTransfers(route); const duration = getDuration(route);
+                let badge = (route === bestDurationRoute) ? '<span class="best-badge">最速</span>' : '';
+                let cardHTML = `<div class="route-summary"><div>${portNames[route[0].from]} → ${portNames[route[route.length-1].to]} ${badge}</div><div class="transfers">乗り換え: ${transfers}回</div><div class="time">所要時間: ${Math.floor(duration/60)}時間 ${duration%60}分</div></div>`;
+                route.forEach((leg, index) => {
+                    if (index > 0) {
+                        const prevLeg = route[index - 1], waitTime = timeToMinutes(leg.dep) - timeToMinutes(prevLeg.arr);
+                        const type = (prevLeg.vessel !== leg.vessel) ? "乗り換え" : "寄港";
+                        cardHTML += `<div class="transfer-info">▼ ${portNames[leg.from]}で**${type}** (待ち時間: ${waitTime}分)</div>`;
+                    }
+                    cardHTML += `<div class="leg"><div class="leg-mode">${modeIcons[leg.mode]||'➡️'}</div><div class="leg-time">${leg.dep} → ${leg.arr}</div><div class="leg-details"><span class="leg-path">${portNames[leg.from]} → ${portNames[leg.to]}</span><span class="leg-vessel">${leg.vessel}</span></div></div>`;
+                });
+                card.innerHTML = cardHTML; resultsDiv.appendChild(card);
+            });
+        }
+        
+        searchBtn.addEventListener('click', () => {
+            const startLoc = departureSelect.value, endLoc = arrivalSelect.value;
+            if (startLoc === endLoc) { alert('出発地と到着地が同じです。'); return; }
+            const locationMap = { 'TOKYO': ['TOKYO_HND'], 'HONDO': ['SAKAI', 'SHICHI'], 'OKI_AIRPORT': ['OKI_AIRPORT'], 'SAIGO': ['SAIGO'], 'BEPPU': ['BEPPU'], 'HISHIURA': ['HISHIURA'], 'KURII': ['KURII'] };
+            const startPorts = locationMap[startLoc] || [startLoc], endPorts = locationMap[endLoc] || [endLoc];
+            let allRoutes = [];
+            startPorts.forEach(start => { endPorts.forEach(end => { if (start !== end) allRoutes.push(...findRoutes(start, end)); }); });
+            if(noResultsP) noResultsP.style.display = 'none';
+            const uniqueRoutes = Array.from(new Map(allRoutes.map(r => [JSON.stringify(r), r])).values());
+            displayResults(uniqueRoutes);
+        });
+
+        swapBtn.addEventListener('click', () => {
+            const depValue = departureSelect.value;
+            departureSelect.value = arrivalSelect.value;
+            arrivalSelect.value = depValue;
+        });
+
+        populateSelectors();
+    });
+</script>
+
+</body>
+</html>
