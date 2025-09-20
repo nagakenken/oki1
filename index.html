@@ -109,22 +109,30 @@
 </div>
 
 <script>
-    const locations = { 'TOKYO': '東京 (羽田空港)', 'HONDO': '本土 (境港/七類港)', 'SAIGO': '西郷港 (島後)', 'OKI_AIRPORT': '隠岐ジオパーク空港', 'BEPPU': '別府港 (西ノ島)', 'HISHIURA': '菱浦港 (中ノ島)', 'KURII': '来居港 (知夫里島)' };
-    const portNames = { 'TOKYO_HND': '羽田空港', 'YGJ_AIRPORT': '米子鬼太郎空港', 'IZO_AIRPORT': '出雲縁結び空港', 'SAKAI': '境港 (本土)', 'SHICHI': '七類港 (本土)', 'OKI_AIRPORT': '隠岐ジオパーク空港', 'SAIGO': '西郷港 (島後)', 'BEPPU': '別府港 (西ノ島)', 'HISHIURA': '菱浦港 (中ノ島)', 'KURII': '来居港 (知夫里島)' };
+    const locations = { 'TOKYO': '東京 (羽田空港)', 'HONDO': '本土 (境港/七類港)', 'SAIGO': '西郷港 (島後)', /*'OKI_AIRPORT': '隠岐ジオパーク空港',*/ 'BEPPU': '別府港 (西ノ島)', 'HISHIURA': '菱浦港 (中ノ島)', 'KURII': '来居港 (知夫里島)' };
+    const portNames = { 'TOKYO_HND': '羽田空港', 'ITM': '伊丹空港', 'YGJ_AIRPORT': '米子鬼太郎空港', 'IZO_AIRPORT': '出雲縁結び空港', 'SAKAI': '境港 (本土)', 'SHICHI': '七類港 (本土)', 'OKI_AIRPORT': '隠岐ジオパーク空港', 'SAIGO': '西郷港 (島後)', 'BEPPU': '別府港 (西ノ島)', 'HISHIURA': '菱浦港 (中ノ島)', 'KURII': '来居港 (知夫里島)' };
     
-    // ▼▼▼▼▼【修正点】全時刻表データを公式情報に基づき再構築▼▼▼▼▼
     const schedule = [
-        // --- 飛行機・連絡バス ---
-        { from: 'TOKYO_HND', to: 'OKI_AIRPORT', dep: '10:15', arr: '11:50', mode: 'Flight', vessel: 'JAL 3431便' },
-        { from: 'OKI_AIRPORT', to: 'SAIGO', dep: '12:00', arr: '12:15', mode: 'Bus', vessel: '隠岐一畑バス' },
-        { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '11:30', arr: '11:45', mode: 'Bus', vessel: '隠岐一畑バス' },
-        { from: 'OKI_AIRPORT', to: 'TOKYO_HND', dep: '12:20', arr: '13:45', mode: 'Flight', vessel: 'JAL 3432便' },
+        // --- 飛行機・連絡バス (往路: 東京・大阪 → 隠岐) ---
+        { from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '07:10', arr: '08:35', mode: 'Flight', vessel: 'JAL 277便' },
+        { from: 'IZO_AIRPORT', to: 'OKI_AIRPORT', dep: '09:00', arr: '09:25', mode: 'Flight', vessel: 'JAC 3431便 (乗継)' },
+        { from: 'TOKYO_HND', to: 'ITM', dep: '11:30', arr: '12:35', mode: 'Flight', vessel: 'JAL/ANA便' },
+        { from: 'ITM', to: 'OKI_AIRPORT', dep: '13:45', arr: '14:35', mode: 'Flight', vessel: 'JAC 3433便' },
+        { from: 'OKI_AIRPORT', to: 'SAIGO', dep: '09:40', arr: '09:55', mode: 'Bus', vessel: '隠岐一畑バス' },
+        { from: 'OKI_AIRPORT', to: 'SAIGO', dep: '14:50', arr: '15:05', mode: 'Bus', vessel: '隠岐一畑バス' },
         { from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '11:35', arr: '13:00', mode: 'Flight', vessel: 'JAL 281便' },
         { from: 'IZO_AIRPORT', to: 'SHICHI', dep: '13:20', arr: '14:30', mode: 'Bus', vessel: '隠岐汽船接続バス' },
+
+        // --- 飛行機・連絡バス (復路: 隠岐 → 東京・大阪) ---
+        { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '09:10', arr: '09:25', mode: 'Bus', vessel: '隠岐一畑バス' },
+        { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '14:15', arr: '14:30', mode: 'Bus', vessel: '隠岐一畑バス' },
+        { from: 'OKI_AIRPORT', to: 'IZO_AIRPORT', dep: '09:55', arr: '10:20', mode: 'Flight', vessel: 'JAC 3432便 (乗継)' },
+        { from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '11:00', arr: '12:20', mode: 'Flight', vessel: 'JAL 280便' },
+        { from: 'OKI_AIRPORT', to: 'ITM', dep: '15:00', arr: '15:50', mode: 'Flight', vessel: 'JAC 3434便' },
+        { from: 'ITM', to: 'TOKYO_HND', dep: '17:30', arr: '18:40', mode: 'Flight', vessel: 'JAL/ANA便' },
         { from: 'SHICHI', to: 'IZO_AIRPORT', dep: '11:40', arr: '12:50', mode: 'Bus', vessel: '隠岐汽船接続バス' },
         { from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '13:35', arr: '14:55', mode: 'Flight', vessel: 'JAL 282便' },
-        { from: 'TOKYO_HND', to: 'YGJ_AIRPORT', dep: '10:45', arr: '12:05', mode: 'Flight', vessel: 'ANA 385便' },
-        { from: 'YGJ_AIRPORT', to: 'SHICHI', dep: '13:00', arr: '13:45', mode: 'Bus', vessel: '隠岐汽船接続バス' },
+        { from: 'SAKAI', to: 'YGJ_AIRPORT', dep: '15:30', arr: '15:55', mode: 'Bus', vessel: '連絡バス' },
         { from: 'YGJ_AIRPORT', to: 'TOKYO_HND', dep: '16:40', arr: '18:00', mode: 'Flight', vessel: 'ANA 388便' },
 
         // --- フェリーおき ---
@@ -145,12 +153,12 @@
         { from: 'HISHIURA', to: 'SAIGO', dep: '17:45', arr: '18:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
         
         // --- 高速船レインボージェット ---
-        { from: 'BEPPU', to: 'HISHIURA', dep: '08:00', arr: '08:10', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'HISHIURA', to: 'SAIGO', dep: '08:14', arr: '08:45', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'SAIGO', to: 'SHICHI', dep: '08:54', arr: '10:03', mode: 'FastFerry', vessel: 'レインボージェット' },
         { from: 'SHICHI', to: 'SAIGO', dep: '15:45', arr: '16:54', mode: 'FastFerry', vessel: 'レインボージェット' },
         { from: 'SAIGO', to: 'HISHIURA', dep: '17:00', arr: '17:31', mode: 'FastFerry', vessel: 'レインボージェット' },
         { from: 'HISHIURA', to: 'BEPPU', dep: '17:34', arr: '17:44', mode: 'FastFerry', vessel: 'レインボージェット' },
+        { from: 'BEPPU', to: 'HISHIURA', dep: '08:00', arr: '08:10', mode: 'FastFerry', vessel: 'レインボージェット' },
+        { from: 'HISHIURA', to: 'SAIGO', dep: '08:14', arr: '08:45', mode: 'FastFerry', vessel: 'レインボージェット' },
+        { from: 'SAIGO', to: 'SHICHI', dep: '08:54', arr: '10:03', mode: 'FastFerry', vessel: 'レインボージェット' },
 
         // --- 内航船フェリーどうぜん ---
         { from: 'HISHIURA', to: 'BEPPU', dep: '07:45', arr: '08:00', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'BEPPU', to: 'HISHIURA', dep: '08:15', arr: '08:30', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'KURII', dep: '08:35', arr: '08:55', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'KURII', to: 'HISHIURA', dep: '09:05', arr: '09:25', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'BEPPU', dep: '15:20', arr: '15:35', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'BEPPU', to: 'HISHIURA', dep: '15:50', arr: '16:05', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'KURII', dep: '16:10', arr: '16:30', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'KURII', to: 'HISHIURA', dep: '16:40', arr: '17:00', mode: 'Ferry', vessel: 'フェリーどうぜん' },
@@ -195,7 +203,7 @@
                 departureSelect.add(new Option(locations[code], code));
                 arrivalSelect.add(new Option(locations[code], code));
             });
-            departureSelect.value = 'HISHIURA'; arrivalSelect.value = 'SAIGO';
+            departureSelect.value = 'HISHIURA'; arrivalSelect.value = 'TOKYO';
         }
 
         function displayResults(routes) {
@@ -244,13 +252,27 @@
         searchBtn.addEventListener('click', () => {
             const startLoc = departureSelect.value, endLoc = arrivalSelect.value;
             if (startLoc === endLoc) { alert('出発地と到着地が同じです。'); return; }
+            
+            // ▼▼▼▼▼【修正点】出発地が東京の場合、羽田のみを検索開始地点とする▼▼▼▼▼
             const locationMap = { 'TOKYO': ['TOKYO_HND'], 'HONDO': ['SAKAI', 'SHICHI'], 'OKI_AIRPORT': ['OKI_AIRPORT'], 'SAIGO': ['SAIGO'], 'BEPPU': ['BEPPU'], 'HISHIURA': ['HISHIURA'], 'KURII': ['KURII'] };
-            const startPorts = locationMap[startLoc] || [startLoc], endPorts = locationMap[endLoc] || [endLoc];
+            const startPorts = locationMap[startLoc] || [startLoc];
+            const endPorts = locationMap[endLoc] || [endLoc];
+            
             let allRoutes = [];
             startPorts.forEach(start => { endPorts.forEach(end => { if (start !== end) allRoutes.push(...findRoutes(start, end)); }); });
+            
             const uniqueRoutes = Array.from(new Map(allRoutes.map(r => [JSON.stringify(r), r])).values());
-            const finalDestination = endPorts[0];
-            currentResults = uniqueRoutes.filter(route => { for (let i = 0; i < route.length - 1; i++) if (route[i].to === finalDestination) return false; return true; });
+            
+            const finalDestination = endPorts.length === 1 ? endPorts[0] : null;
+            currentResults = uniqueRoutes.filter(route => { 
+                if (!finalDestination) return true;
+                // 到着地が複数ある場合（本土など）はフィルタリングしない
+                if (endPorts.length > 1 && endPorts.includes(route[route.length - 1].to)) {
+                    return true;
+                }
+                for (let i = 0; i < route.length - 1; i++) if (route[i].to === finalDestination) return false; return true; 
+            });
+
             if(noResultsP) noResultsP.style.display = 'none';
             currentSort = 'default';
             sortAndDisplay();
@@ -264,3 +286,4 @@
 
 </body>
 </html>
+
