@@ -33,12 +33,15 @@
         }
         button#search-btn:hover { background-color: #0056b3; }
         .sort-options {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; 
+            display: grid; 
+            /* ▼▼▼▼▼【修正点】ボタン5個に対応するためグリッドレイアウトを調整▼▼▼▼▼ */
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 10px; 
             margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;
         }
         .sort-options button {
             background-color: #e9ecef; border: 1px solid #ced4da; color: #495057;
-            padding: 10px; cursor: pointer; font-size: 0.9em;
+            padding: 10px; cursor: pointer; font-size: 0.85em; /* フォントサイズを微調整 */
         }
         .sort-options button.active {
             background-color: #005a9c; color: white; border-color: #005a9c;
@@ -95,11 +98,13 @@
         <button id="search-btn">ルートを検索</button>
     </div>
     <div class="results-container">
+        <!-- ▼▼▼▼▼【修正点】「到着時刻順」ボタンを追加▼▼▼▼▼ -->
         <div class="sort-options" id="sort-options" style="display:none;">
             <button id="sort-default" data-sort="default">おすすめ順</button>
             <button id="sort-departure" data-sort="departure">出発時刻順</button>
             <button id="sort-duration" data-sort="duration">所要時間順</button>
             <button id="sort-travel-time" data-sort="travel-time">実移動時間順</button>
+            <button id="sort-arrival" data-sort="arrival">到着時刻順</button>
         </div>
         <h2 id="results-title" style="display:none;">検索結果</h2>
         <div id="results">
@@ -113,57 +118,12 @@
     const portNames = { 'TOKYO_HND': '羽田空港', 'ITM': '伊丹空港', 'YGJ_AIRPORT': '米子鬼太郎空港', 'IZO_AIRPORT': '出雲縁結び空港', 'SAKAI': '境港 (本土)', 'SHICHI': '七類港 (本土)', 'OKI_AIRPORT': '隠岐ジオパーク空港', 'SAIGO': '西郷港 (島後)', 'BEPPU': '別府港 (西ノ島)', 'HISHIURA': '菱浦港 (中ノ島)', 'KURII': '来居港 (知夫里島)' };
     
     const schedule = [
-        // --- 飛行機・連絡バス (往路: 東京・大阪 → 隠岐) ---
-        { from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '07:10', arr: '08:35', mode: 'Flight', vessel: 'JAL 277便' },
-        { from: 'IZO_AIRPORT', to: 'OKI_AIRPORT', dep: '09:00', arr: '09:25', mode: 'Flight', vessel: 'JAC 3431便 (乗継)' },
-        { from: 'TOKYO_HND', to: 'ITM', dep: '11:30', arr: '12:35', mode: 'Flight', vessel: 'JAL/ANA便' },
-        { from: 'ITM', to: 'OKI_AIRPORT', dep: '13:45', arr: '14:35', mode: 'Flight', vessel: 'JAC 3433便' },
-        { from: 'OKI_AIRPORT', to: 'SAIGO', dep: '09:40', arr: '09:55', mode: 'Bus', vessel: '隠岐一畑バス' },
-        { from: 'OKI_AIRPORT', to: 'SAIGO', dep: '14:50', arr: '15:05', mode: 'Bus', vessel: '隠岐一畑バス' },
-        { from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '11:35', arr: '13:00', mode: 'Flight', vessel: 'JAL 281便' },
-        { from: 'IZO_AIRPORT', to: 'SHICHI', dep: '13:20', arr: '14:30', mode: 'Bus', vessel: '隠岐汽船接続バス' },
-
-        // --- 飛行機・連絡バス (復路: 隠岐 → 東京・大阪) ---
-        { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '09:10', arr: '09:25', mode: 'Bus', vessel: '隠岐一畑バス' },
-        { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '14:15', arr: '14:30', mode: 'Bus', vessel: '隠岐一畑バス' },
-        { from: 'OKI_AIRPORT', to: 'IZO_AIRPORT', dep: '09:55', arr: '10:20', mode: 'Flight', vessel: 'JAC 3432便 (乗継)' },
-        { from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '11:00', arr: '12:20', mode: 'Flight', vessel: 'JAL 280便' },
-        { from: 'OKI_AIRPORT', to: 'ITM', dep: '15:00', arr: '15:50', mode: 'Flight', vessel: 'JAC 3434便' },
-        { from: 'ITM', to: 'TOKYO_HND', dep: '17:30', arr: '18:40', mode: 'Flight', vessel: 'JAL/ANA便' },
-        { from: 'SHICHI', to: 'IZO_AIRPORT', dep: '11:40', arr: '12:50', mode: 'Bus', vessel: '隠岐汽船接続バス' },
-        { from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '13:35', arr: '14:55', mode: 'Flight', vessel: 'JAL 282便' },
-        { from: 'SAKAI', to: 'YGJ_AIRPORT', dep: '15:30', arr: '15:55', mode: 'Bus', vessel: '連絡バス' },
-        { from: 'YGJ_AIRPORT', to: 'TOKYO_HND', dep: '16:40', arr: '18:00', mode: 'Flight', vessel: 'ANA 388便' },
-
-        // --- フェリーおき ---
-        { from: 'SHICHI', to: 'SAIGO', dep: '09:00', arr: '11:25', mode: 'Ferry', vessel: 'フェリーおき' },
-        { from: 'SAIGO', to: 'HISHIURA', dep: '12:00', arr: '13:10', mode: 'Ferry', vessel: 'フェリーおき' },
-        { from: 'HISHIURA', to: 'BEPPU', dep: '13:20', arr: '13:35', mode: 'Ferry', vessel: 'フェリーおき' },
-        { from: 'BEPPU', to: 'SAIGO', dep: '13:50', arr: '15:00', mode: 'Ferry', vessel: 'フェリーおき' },
-        { from: 'SAIGO', to: 'SHICHI', dep: '15:40', arr: '18:05', mode: 'Ferry', vessel: 'フェリーおき' },
-
-        // --- フェリーしらしま ---
-        { from: 'SAIGO', to: 'HISHIURA', dep: '08:30', arr: '09:40', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'HISHIURA', to: 'BEPPU', dep: '09:50', arr: '10:05', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'BEPPU', to: 'KURII', dep: '10:20', arr: '10:50', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'KURII', to: 'SAKAI', dep: '10:55', arr: '13:20', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'SAKAI', to: 'KURII', dep: '14:10', arr: '16:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'KURII', to: 'BEPPU', dep: '16:40', arr: '17:10', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'BEPPU', to: 'HISHIURA', dep: '17:20', arr: '17:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        { from: 'HISHIURA', to: 'SAIGO', dep: '17:45', arr: '18:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
-        
-        // --- 高速船レインボージェット ---
-        { from: 'SHICHI', to: 'SAIGO', dep: '15:45', arr: '16:54', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'SAIGO', to: 'HISHIURA', dep: '17:00', arr: '17:31', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'HISHIURA', to: 'BEPPU', dep: '17:34', arr: '17:44', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'BEPPU', to: 'HISHIURA', dep: '08:00', arr: '08:10', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'HISHIURA', to: 'SAIGO', dep: '08:14', arr: '08:45', mode: 'FastFerry', vessel: 'レインボージェット' },
-        { from: 'SAIGO', to: 'SHICHI', dep: '08:54', arr: '10:03', mode: 'FastFerry', vessel: 'レインボージェット' },
-
-        // --- 内航船フェリーどうぜん ---
+        { from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '07:10', arr: '08:35', mode: 'Flight', vessel: 'JAL 277便' },{ from: 'IZO_AIRPORT', to: 'OKI_AIRPORT', dep: '09:00', arr: '09:25', mode: 'Flight', vessel: 'JAC 3431便 (乗継)' },{ from: 'TOKYO_HND', to: 'ITM', dep: '11:30', arr: '12:35', mode: 'Flight', vessel: 'JAL/ANA便' },{ from: 'ITM', to: 'OKI_AIRPORT', dep: '13:45', arr: '14:35', mode: 'Flight', vessel: 'JAC 3433便' },{ from: 'OKI_AIRPORT', to: 'SAIGO', dep: '09:40', arr: '09:55', mode: 'Bus', vessel: '隠岐一畑バス' },{ from: 'OKI_AIRPORT', to: 'SAIGO', dep: '14:50', arr: '15:05', mode: 'Bus', vessel: '隠岐一畑バス' },{ from: 'TOKYO_HND', to: 'IZO_AIRPORT', dep: '11:35', arr: '13:00', mode: 'Flight', vessel: 'JAL 281便' },{ from: 'IZO_AIRPORT', to: 'SHICHI', dep: '13:20', arr: '14:30', mode: 'Bus', vessel: '隠岐汽船接続バス' },
+        { from: 'SAIGO', to: 'OKI_AIRPORT', dep: '09:10', arr: '09:25', mode: 'Bus', vessel: '隠岐一畑バス' },{ from: 'SAIGO', to: 'OKI_AIRPORT', dep: '14:15', arr: '14:30', mode: 'Bus', vessel: '隠岐一畑バス' },{ from: 'OKI_AIRPORT', to: 'IZO_AIRPORT', dep: '09:55', arr: '10:25', mode: 'Flight', vessel: 'JAL 3434 | JAC運航' },{ from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '12:20', arr: '13:40', mode: 'Flight', vessel: 'JAL 280便' },{ from: 'OKI_AIRPORT', to: 'ITM', dep: '15:00', arr: '15:50', mode: 'Flight', vessel: 'JAC 3434便' },{ from: 'ITM', to: 'TOKYO_HND', dep: '17:30', arr: '18:40', mode: 'Flight', vessel: 'JAL/ANA便' },{ from: 'SHICHI', to: 'IZO_AIRPORT', dep: '11:40', arr: '12:50', mode: 'Bus', vessel: '隠岐汽船接続バス' },{ from: 'IZO_AIRPORT', to: 'TOKYO_HND', dep: '13:35', arr: '14:55', mode: 'Flight', vessel: 'JAL 282便' },{ from: 'SAKAI', to: 'YGJ_AIRPORT', dep: '15:30', arr: '15:55', mode: 'Bus', vessel: '連絡バス' },{ from: 'YGJ_AIRPORT', to: 'TOKYO_HND', dep: '16:40', arr: '18:00', mode: 'Flight', vessel: 'ANA 388便' },
+        { from: 'SHICHI', to: 'SAIGO', dep: '09:00', arr: '11:25', mode: 'Ferry', vessel: 'フェリーおき' },{ from: 'SAIGO', to: 'HISHIURA', dep: '12:00', arr: '13:10', mode: 'Ferry', vessel: 'フェリーおき' },{ from: 'HISHIURA', to: 'BEPPU', dep: '13:20', arr: '13:35', mode: 'Ferry', vessel: 'フェリーおき' },{ from: 'BEPPU', to: 'SAIGO', dep: '13:50', arr: '15:00', mode: 'Ferry', vessel: 'フェリーおき' },{ from: 'SAIGO', to: 'SHICHI', dep: '15:40', arr: '18:05', mode: 'Ferry', vessel: 'フェリーおき' },
+        { from: 'SAIGO', to: 'HISHIURA', dep: '08:30', arr: '09:40', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'HISHIURA', to: 'BEPPU', dep: '09:50', arr: '10:05', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'BEPPU', to: 'KURII', dep: '10:20', arr: '10:50', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'KURII', to: 'SAKAI', dep: '10:55', arr: '13:20', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'SAKAI', to: 'KURII', dep: '14:10', arr: '16:35', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'KURII', to: 'BEPPU', dep: '16:40', arr: '17:10', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'BEPPU', to: 'HISHIURA', dep: '17:20', arr: '17:35', mode: 'Ferry', vessel: 'フェリーしらしま' },{ from: 'HISHIURA', to: 'SAIGO', dep: '17:45', arr: '18:35', mode: 'Ferry', vessel: 'フェリーしらしま' },
+        { from: 'SHICHI', to: 'SAIGO', dep: '15:45', arr: '16:54', mode: 'FastFerry', vessel: 'レインボージェット' },{ from: 'SAIGO', to: 'HISHIURA', dep: '17:00', arr: '17:31', mode: 'FastFerry', vessel: 'レインボージェット' },{ from: 'HISHIURA', to: 'BEPPU', dep: '17:34', arr: '17:44', mode: 'FastFerry', vessel: 'レインボージェット' },{ from: 'BEPPU', to: 'HISHIURA', dep: '08:00', arr: '08:10', mode: 'FastFerry', vessel: 'レインボージェット' },{ from: 'HISHIURA', to: 'SAIGO', dep: '08:14', arr: '08:45', mode: 'FastFerry', vessel: 'レインボージェット' },{ from: 'SAIGO', to: 'SHICHI', dep: '08:54', arr: '10:03', mode: 'FastFerry', vessel: 'レインボージェット' },
         { from: 'HISHIURA', to: 'BEPPU', dep: '07:45', arr: '08:00', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'BEPPU', to: 'HISHIURA', dep: '08:15', arr: '08:30', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'KURII', dep: '08:35', arr: '08:55', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'KURII', to: 'HISHIURA', dep: '09:05', arr: '09:25', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'BEPPU', dep: '15:20', arr: '15:35', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'BEPPU', to: 'HISHIURA', dep: '15:50', arr: '16:05', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'HISHIURA', to: 'KURII', dep: '16:10', arr: '16:30', mode: 'Ferry', vessel: 'フェリーどうぜん' }, { from: 'KURII', to: 'HISHIURA', dep: '16:40', arr: '17:00', mode: 'Ferry', vessel: 'フェリーどうぜん' },
-
-        // --- 内航船いそかぜ ---
         { from: 'BEPPU', to: 'HISHIURA', dep: '07:20', arr: '07:35', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '07:40', arr: '08:00', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '08:10', arr: '08:30', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '08:35', arr: '08:50', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'BEPPU', to: 'HISHIURA', dep: '10:00', arr: '10:15', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '10:20', arr: '10:40', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '10:50', arr: '11:10', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '11:15', arr: '11:30', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'BEPPU', to: 'HISHIURA', dep: '13:00', arr: '13:15', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '13:20', arr: '13:40', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '13:50', arr: '14:10', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '14:15', arr: '14:30', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'BEPPU', to: 'HISHIURA', dep: '17:00', arr: '17:15', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'KURII', dep: '17:20', arr: '17:40', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'KURII', to: 'HISHIURA', dep: '17:50', arr: '18:10', mode: 'Ferry', vessel: 'いそかぜ' }, { from: 'HISHIURA', to: 'BEPPU', dep: '18:15', arr: '18:30', mode: 'Ferry', vessel: 'いそかぜ' }
     ];
 
@@ -183,6 +143,8 @@
         const getDuration = r => timeToMinutes(r[r.length - 1].arr) - timeToMinutes(r[0].dep);
         const getTransfers = r => { let c = 0; for (let i = 0; i < r.length - 1; i++) if (r[i].vessel !== r[i + 1].vessel) c++; return c; };
         const getActualTravelTime = r => r.reduce((total, leg) => total + (timeToMinutes(leg.arr) - timeToMinutes(leg.dep)), 0);
+        // ▼▼▼▼▼【新機能】到着時刻を取得する関数▼▼▼▼▼
+        const getArrivalTime = r => timeToMinutes(r[r.length - 1].arr);
 
         function findRoutes(start, end, cTime = 0, cPath = [], visited = new Set()) {
             visited.add(start); let routes = [];
@@ -239,10 +201,13 @@
         
         function sortAndDisplay() {
             let sortedResults = [...currentResults];
+            // ▼▼▼▼▼【修正点】「到着時刻順」のソートロジックを追加▼▼▼▼▼
             if (currentSort === 'default') { sortedResults.sort((a, b) => getTransfers(a) - getTransfers(b) || getDuration(a) - getDuration(b) || timeToMinutes(a[0].dep) - timeToMinutes(b[0].dep));
             } else if (currentSort === 'departure') { sortedResults.sort((a, b) => timeToMinutes(a[0].dep) - timeToMinutes(b[0].dep));
             } else if (currentSort === 'duration') { sortedResults.sort((a, b) => getDuration(a) - getDuration(b));
             } else if (currentSort === 'travel-time') { sortedResults.sort((a, b) => getActualTravelTime(a) - getActualTravelTime(b));
+            } else if (currentSort === 'arrival') {
+                sortedResults.sort((a, b) => getArrivalTime(a) - getArrivalTime(b));
             }
             document.querySelectorAll('.sort-options button').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`sort-${currentSort}`).classList.add('active');
@@ -252,27 +217,20 @@
         searchBtn.addEventListener('click', () => {
             const startLoc = departureSelect.value, endLoc = arrivalSelect.value;
             if (startLoc === endLoc) { alert('出発地と到着地が同じです。'); return; }
-            
-            // ▼▼▼▼▼【修正点】出発地が東京の場合、羽田のみを検索開始地点とする▼▼▼▼▼
             const locationMap = { 'TOKYO': ['TOKYO_HND'], 'HONDO': ['SAKAI', 'SHICHI'], 'OKI_AIRPORT': ['OKI_AIRPORT'], 'SAIGO': ['SAIGO'], 'BEPPU': ['BEPPU'], 'HISHIURA': ['HISHIURA'], 'KURII': ['KURII'] };
             const startPorts = locationMap[startLoc] || [startLoc];
             const endPorts = locationMap[endLoc] || [endLoc];
-            
             let allRoutes = [];
             startPorts.forEach(start => { endPorts.forEach(end => { if (start !== end) allRoutes.push(...findRoutes(start, end)); }); });
-            
             const uniqueRoutes = Array.from(new Map(allRoutes.map(r => [JSON.stringify(r), r])).values());
-            
             const finalDestination = endPorts.length === 1 ? endPorts[0] : null;
             currentResults = uniqueRoutes.filter(route => { 
                 if (!finalDestination) return true;
-                // 到着地が複数ある場合（本土など）はフィルタリングしない
                 if (endPorts.length > 1 && endPorts.includes(route[route.length - 1].to)) {
                     return true;
                 }
                 for (let i = 0; i < route.length - 1; i++) if (route[i].to === finalDestination) return false; return true; 
             });
-
             if(noResultsP) noResultsP.style.display = 'none';
             currentSort = 'default';
             sortAndDisplay();
